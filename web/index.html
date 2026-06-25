@@ -128,7 +128,15 @@
       background:radial-gradient(120% 120% at 50% 0%, #1b2230, #0d121c);
       border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);
     }
-    #cubeCanvas { width:100%; height:460px; display:block; cursor:grab; }
+    #cubeCanvas { width:100%; height:440px; display:block; cursor:grab; }
+
+    /* ---------- LAYOUT 2 colonnes : cube à gauche, contrôles à droite ---------- */
+    .app-layout { display:grid; grid-template-columns:380px 1fr; gap:22px; align-items:start; margin-top:8px; }
+    @media (max-width:880px){ .app-layout{ grid-template-columns:1fr; } }
+    .viewer-side { position:sticky; top:74px; }
+    .viewer-cap { color:var(--muted); font-size:.8rem; text-align:center; margin:10px 0 0; }
+    .control-side .grid { grid-template-columns:repeat(2,1fr); }
+    .control-side h2:first-child { margin-top:2px; }
     .panel { background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line);
              border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
     .bigcount { font-size:2.6rem; font-weight:800; line-height:1;
@@ -199,30 +207,36 @@
       </div>
     </div>
 
-    <div id="photoMode">
-      <h2>1. Vos 6 faces</h2>
-      <div class="grid" id="grid"></div>
-      <div class="center-actions">
-        <button id="solveBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Analyser &amp; Résoudre</button>
-      </div>
-    </div>
-
-    <div id="manualMode" style="display:none">
-      <h2>1. Peignez votre cube</h2>
-      <p class="sub">Choisissez une couleur, puis cliquez sur les stickers du cube 3D pour les peindre. Tournez le cube avec la souris (cliquer-glisser) pour atteindre toutes les faces. Les centres sont fixes.</p>
-      <div class="palette" id="palette"></div>
-      <div class="center-actions">
-        <button id="solveManualBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Résoudre ce cube</button>
-      </div>
-    </div>
-
-    <div class="status" id="status" style="text-align:center">Préparation du solveur…</div>
-
-    <div id="stage">
-      <h2 id="stageTitle">2. Guide de résolution</h2>
-      <div class="viewer-row">
+    <div class="app-layout">
+      <!-- GAUCHE : cube 3D persistant (aperçu live + animation) -->
+      <div class="viewer-side">
         <div id="canvasWrap"><canvas id="cubeCanvas"></canvas></div>
-        <div class="panel" id="guidePanel">
+        <p class="viewer-cap" id="viewerCap">Aperçu 3D — il se remplit à chaque photo ajoutée. Glissez pour tourner.</p>
+      </div>
+
+      <!-- DROITE : contrôles selon le mode -->
+      <div class="control-side">
+        <div id="photoMode">
+          <h2>1. Vos 6 faces</h2>
+          <div class="grid" id="grid"></div>
+          <div class="center-actions">
+            <button id="solveBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Analyser &amp; Résoudre</button>
+          </div>
+        </div>
+
+        <div id="manualMode" style="display:none">
+          <h2>1. Peignez votre cube</h2>
+          <p class="sub">Choisissez une couleur, puis cliquez sur les stickers du cube 3D pour les peindre. Glissez pour tourner. Les centres sont fixes.</p>
+          <div class="palette" id="palette"></div>
+          <div class="center-actions">
+            <button id="solveManualBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Résoudre ce cube</button>
+          </div>
+        </div>
+
+        <div class="status" id="status">Préparation du solveur…</div>
+
+        <div class="panel" id="guidePanel" style="display:none">
+          <h2 id="stageTitle" style="margin:0 0 14px">2. Guide de résolution</h2>
           <div><span class="bigcount" id="moveCount">0</span> <span style="color:var(--muted)">mouvements</span></div>
           <div class="progress"><div id="progressBar"></div></div>
           <div class="currentmove">
@@ -305,12 +319,21 @@
     const file = input.files[0]; if (!file) return;
     const face = input.dataset.face;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       dataUrls[face] = reader.result;
       document.getElementById("drop-"+face).innerHTML = `<img src="${reader.result}" alt="${face}"/>`;
       document.getElementById("card-"+face).classList.add("filled");
+      // Détecte les couleurs de cette face et les peint en direct sur le cube 3D.
+      try {
+        const colors = await detectFace(reader.result);
+        if (!previewFaces) previewFaces = blankPreviewFaces();
+        previewFaces[face] = colors;
+        paintFacePreview(face, colors);
+      } catch(e){ /* image illisible : on ignore */ }
       const n = Object.keys(dataUrls).length;
       setStatus(n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)"), "info");
+      setCaption(n < 6 ? ("Aperçu 3D — " + n + "/6 faces peintes. Glissez pour tourner.")
+                       : "Aperçu 3D complet ! Cliquez « Analyser & Résoudre ».");
       solveBtn.disabled = !(n === 6 && solverReady);
     };
     reader.readAsDataURL(file);
@@ -403,7 +426,7 @@
   // =========================================================================
   //  PARTIE 3 — CUBE 3D (Three.js)
   // =========================================================================
-  const COLOR_HEX = { white:0xffffff, yellow:0xffd500, red:0xdd2222, orange:0xff8800, blue:0x0066cc, green:0x22aa22 };
+  const COLOR_HEX = { white:0xffffff, yellow:0xffd500, red:0xdd2222, orange:0xff8800, blue:0x0066cc, green:0x22aa22, gray:0x2b303c };
   const FACE_NORMAL = { U:[0,1,0], R:[1,0,0], F:[0,0,1], D:[0,-1,0], L:[-1,0,0], B:[0,0,-1] };
   // Position (x,y,z) de chaque facelette, dans l'ordre de lecture de cubejs.
   const FACELET_POS = {
@@ -428,6 +451,24 @@
     return { U:Array(9).fill("white"), R:Array(9).fill("red"), F:Array(9).fill("green"),
              D:Array(9).fill("yellow"), L:Array(9).fill("orange"), B:Array(9).fill("blue") };
   }
+  // Cube d'aperçu : centres colorés, reste en gris ; se remplit au fil des photos.
+  const CENTER_COLOR = { U:"white", R:"red", F:"green", D:"yellow", L:"orange", B:"blue" };
+  let previewFaces = null;
+  function blankPreviewFaces(){
+    const f = {};
+    for (const k of FACE_ORDER){ f[k] = Array(9).fill("gray"); f[k][4] = CENTER_COLOR[k]; }
+    return f;
+  }
+  // Repeint une seule face du cube affiché (sans tout reconstruire).
+  function paintFacePreview(face, colors){
+    stickerMeshes.forEach(st=>{
+      if (st.userData.face === face){
+        const c = colors[st.userData.idx];
+        st.material.color.setHex(COLOR_HEX[c] !== undefined ? COLOR_HEX[c] : COLOR_HEX.gray);
+      }
+    });
+  }
+  function setCaption(txt){ const el=document.getElementById("viewerCap"); if(el) el.textContent=txt; }
 
   function initThree(){
     const canvas = document.getElementById("cubeCanvas");
@@ -615,19 +656,24 @@
     if (!scene) initThree();
     buildCube(faces);
     editing = false; step = 0; playing = false;
+    document.getElementById("photoMode").style.display = "none";
+    document.getElementById("manualMode").style.display = "none";
     document.getElementById("guidePanel").style.display = "";
     document.getElementById("stageTitle").textContent = "2. Guide de résolution";
-    document.getElementById("stage").classList.add("show");
     resizeRenderer(); renderMovePanel();
     setStatus("Cube résolu en "+moves.length+" mouvements !", "ok");
-    document.getElementById("stage").scrollIntoView({behavior:"smooth"});
+    setCaption("Suivez le guide : Lecture, ou Suivant / Précédent.");
   }
 
   solveBtn.addEventListener("click", async ()=>{
     solveBtn.disabled = true;
-    setStatus("Lecture des couleurs…", "load");
+    setStatus("Calcul de la solution…", "load");
     await new Promise(r=>setTimeout(r,20));
-    try { scannedFaces = await detectAllFaces(); runSolve(scannedFaces); }
+    try {
+      // Les couleurs ont déjà été détectées à l'upload (aperçu) ; on les réutilise.
+      scannedFaces = previewFaces || await detectAllFaces();
+      runSolve(scannedFaces);
+    }
     catch(err){ setStatus(err.message, "err"); }
     solveBtn.disabled = false;
   });
@@ -759,9 +805,8 @@
     currentFaces = manualFaces;
     buildCube(manualFaces);
     document.getElementById("guidePanel").style.display = "none";
-    document.getElementById("stageTitle").textContent = "Cliquez les stickers pour peindre votre cube";
-    document.getElementById("stage").classList.add("show");
     resizeRenderer();
+    setCaption("Cliquez les stickers pour peindre. Glissez pour tourner le cube.");
     setStatus(solverReady
       ? "Choisissez une couleur, peignez les stickers, puis « Résoudre ce cube »."
       : "Préparation du solveur…", "info");
@@ -773,8 +818,11 @@
     document.getElementById("tabManual").classList.remove("active");
     document.getElementById("photoMode").style.display = "";
     document.getElementById("manualMode").style.display = "none";
-    document.getElementById("stage").classList.remove("show");
-    setStatus(solverReady ? "Prêt — chargez vos 6 faces." : "Préparation du solveur…", "info");
+    document.getElementById("guidePanel").style.display = "none";
+    if (scene) buildCube(previewFaces || blankPreviewFaces());   // ré-affiche l'aperçu
+    setCaption("Aperçu 3D — il se remplit à chaque photo ajoutée. Glissez pour tourner.");
+    const n = Object.keys(dataUrls).length;
+    setStatus(solverReady ? (n>0 ? (n+" / 6 faces chargées") : "Prêt — chargez vos 6 faces.") : "Préparation du solveur…", "info");
   });
   document.getElementById("tabManual").addEventListener("click", ()=>{
     document.getElementById("tabManual").classList.add("active");
@@ -787,6 +835,11 @@
     if (!solverReady){ setStatus("Le solveur n'est pas encore prêt, patientez…", "info"); return; }
     runSolve(manualFaces);
   });
+
+  // ---- Affiche le cube d'aperçu 3D dès le chargement de la page ----
+  previewFaces = blankPreviewFaces();
+  initThree();
+  buildCube(previewFaces);
   </script>
 </body>
 </html>
