@@ -6,90 +6,210 @@
   <title>Résolveur de Rubik's Cube 3D</title>
   <style>
     :root {
-      --u:#ffffff; --r:#d22; --f:#2a2; --d:#ffd500; --l:#f80; --b:#06c;
-      --bg:#0e1116; --card:#1a1f27; --line:#2a323d; --txt:#e6edf3; --muted:#8b98a8; --accent:#2da44e;
+      --u:#ffffff; --r:#e23b3b; --f:#27ae46; --d:#ffd500; --l:#ff8a1e; --b:#1273e8;
+      --bg:#0a0d14; --bg2:#0e131d;
+      --card:#161b27; --card2:#1c2230; --line:#283042;
+      --txt:#eef2f8; --muted:#8a96aa;
+      --accent:#22c55e; --accent2:#16a34a;
+      --radius:16px;
+      --shadow:0 10px 30px -12px rgba(0,0,0,.65);
+      --glow:0 0 0 1px rgba(34,197,94,.35), 0 8px 24px -8px rgba(34,197,94,.45);
     }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-           background:var(--bg); color:var(--txt); padding:24px; }
-    .wrap { max-width:1000px; margin:0 auto; }
-    h1 { font-size:1.6rem; margin:0 0 4px; }
-    .sub { color:var(--muted); margin:0 0 20px; }
-    h2 { font-size:1.1rem; border-bottom:1px solid var(--line); padding-bottom:8px; margin:28px 0 14px; }
-    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0; color:var(--txt);
+      font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+      background:
+        radial-gradient(900px 500px at 12% -8%, rgba(34,197,94,.10), transparent 60%),
+        radial-gradient(800px 480px at 100% 0%, rgba(18,115,232,.10), transparent 55%),
+        var(--bg);
+      background-attachment:fixed;
+      padding:0 20px 60px;
+      line-height:1.5;
+    }
+    .wrap { max-width:1040px; margin:0 auto; }
+
+    /* ---------- HERO ---------- */
+    .hero { text-align:center; padding:46px 0 30px; }
+    .hero .logo { font-size:2.6rem; line-height:1; filter:drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
+    h1 {
+      font-size:clamp(1.8rem,4vw,2.6rem); font-weight:800; letter-spacing:-.02em; margin:10px 0 6px;
+      background:linear-gradient(95deg,#fff 10%,#9be8b5 60%,#7cc6ff 100%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .sub { color:var(--muted); margin:0 auto; max-width:620px; font-size:1.02rem; }
+
+    h2 {
+      font-size:.82rem; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);
+      font-weight:700; margin:34px 0 16px; display:flex; align-items:center; gap:10px;
+    }
+    h2::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+
+    /* ---------- TABS ---------- */
+    .tabs { display:inline-flex; gap:4px; padding:5px; margin:0 auto 8px; border-radius:14px;
+            background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow); }
+    .tabs-wrap { text-align:center; }
+    .tab { background:transparent; border:0; color:var(--muted); padding:10px 22px; font-size:.95rem;
+           font-weight:600; border-radius:10px; cursor:pointer; transition:.2s; }
+    .tab:hover { color:var(--txt); }
+    .tab.active { background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#04150b; box-shadow:0 4px 14px -4px rgba(34,197,94,.6); }
+
+    /* ---------- FACE CARDS ---------- */
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
     @media (max-width:600px){ .grid{ grid-template-columns:repeat(2,1fr); } }
-    .face { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center; transition:border-color .2s; }
-    .face.filled { border-color:#3a7; }
-    .badge { display:inline-flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px; font-size:.95rem; }
-    .dot { width:13px; height:13px; border-radius:4px; border:1px solid #0006; }
-    .hint { color:var(--muted); font-size:.72rem; min-height:24px; margin-bottom:6px; }
-    .drop { border:2px dashed var(--line); border-radius:10px; aspect-ratio:1; display:flex; align-items:center;
-            justify-content:center; cursor:pointer; overflow:hidden; background:#0c0f14; color:var(--muted); font-size:.78rem; }
-    .drop:hover { border-color:#4a90e2; }
+    .face {
+      background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line);
+      border-radius:var(--radius); padding:14px; text-align:center; transition:.2s; box-shadow:var(--shadow);
+    }
+    .face:hover { transform:translateY(-3px); border-color:#37425a; }
+    .face.filled { border-color:rgba(34,197,94,.55); box-shadow:var(--glow); }
+    .badge { display:inline-flex; align-items:center; gap:7px; font-weight:700; margin-bottom:4px; font-size:.98rem; }
+    .dot { width:14px; height:14px; border-radius:5px; border:1px solid rgba(0,0,0,.4); box-shadow:0 1px 2px rgba(0,0,0,.4); }
+    .hint { color:var(--muted); font-size:.74rem; min-height:26px; margin-bottom:8px; }
+    .drop {
+      border:2px dashed var(--line); border-radius:12px; aspect-ratio:1; display:flex; align-items:center;
+      justify-content:center; cursor:pointer; overflow:hidden; background:#0b0f17; color:var(--muted);
+      font-size:.82rem; transition:.2s;
+    }
+    .drop:hover { border-color:var(--accent); color:var(--txt); background:#0d1320; }
     .drop img { width:100%; height:100%; object-fit:cover; }
     input[type=file]{ display:none; }
-    .center-actions { text-align:center; margin:22px 0; }
-    button { background:var(--accent); color:#fff; border:0; padding:12px 22px; font-size:1rem; border-radius:10px; cursor:pointer; font-weight:600; }
-    button:disabled { background:#30363d; cursor:not-allowed; color:#888; }
-    button.sec { background:#222b36; border:1px solid var(--line); }
-    .status { margin-top:12px; color:var(--muted); min-height:22px; }
-    .status.err { color:#ff6b6b; }
+
+    /* ---------- BUTTONS ---------- */
+    .center-actions { text-align:center; margin:24px 0; }
+    button {
+      background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#04150b; border:0;
+      padding:13px 26px; font-size:1rem; border-radius:12px; cursor:pointer; font-weight:700;
+      box-shadow:0 8px 20px -8px rgba(34,197,94,.6); transition:.18s; font-family:inherit;
+    }
+    button:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 12px 26px -8px rgba(34,197,94,.75); }
+    button:active:not(:disabled){ transform:translateY(0); }
+    button:disabled { background:#222a39; cursor:not-allowed; color:#5e6b7e; box-shadow:none; }
+    button.sec { background:var(--card2); border:1px solid var(--line); color:var(--txt); box-shadow:none; }
+    button.sec:hover:not(:disabled){ border-color:#3a455c; background:#222b3b; }
+
+    .status { margin-top:14px; color:var(--muted); min-height:22px; font-size:.95rem; }
+    .status.err { color:#ff7676; }
+
+    /* ---------- VIEWER ---------- */
     #stage { display:none; }
-    #stage.show { display:block; }
-    .viewer-row { display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start; }
+    #stage.show { display:block; animation:fade .4s ease; }
+    @keyframes fade { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+    .viewer-row { display:grid; grid-template-columns:1fr 340px; gap:20px; align-items:start; }
     @media (max-width:820px){ .viewer-row{ grid-template-columns:1fr; } }
-    #canvasWrap { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-    #cubeCanvas { width:100%; height:440px; display:block; cursor:grab; }
-    .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
-    .bigcount { font-size:2.4rem; font-weight:800; color:var(--accent); line-height:1; }
-    .moveline { font-family:ui-monospace,monospace; font-size:.95rem; line-height:1.9; word-spacing:2px; margin-top:10px; max-height:120px; overflow:auto; }
-    .moveline .m { padding:1px 6px; border-radius:6px; background:#0c0f14; border:1px solid var(--line); margin:1px; display:inline-block; }
-    .moveline .m.done { opacity:.4; }
-    .moveline .m.current { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .currentmove { text-align:center; margin:14px 0; }
-    .currentmove .big { font-size:3rem; font-weight:800; font-family:ui-monospace,monospace; }
-    .currentmove .desc { color:var(--muted); font-size:.9rem; }
-    .controls { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
-    .controls button { padding:10px 14px; font-size:.95rem; }
-    .progress { height:8px; background:#0c0f14; border-radius:6px; overflow:hidden; margin:12px 0; border:1px solid var(--line); }
-    .progress > div { height:100%; background:var(--accent); width:0%; transition:width .3s; }
+    #canvasWrap {
+      background:radial-gradient(120% 120% at 50% 0%, #1b2230, #0d121c);
+      border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);
+    }
+    #cubeCanvas { width:100%; height:460px; display:block; cursor:grab; }
+    .panel { background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line);
+             border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+    .bigcount { font-size:2.6rem; font-weight:800; line-height:1;
+      background:linear-gradient(180deg,#9be8b5,var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .moveline { font-family:ui-monospace,"Cascadia Code",monospace; font-size:.92rem; line-height:1.9; margin-top:12px; max-height:130px; overflow:auto; }
+    .moveline .m { padding:2px 8px; border-radius:7px; background:#0b0f17; border:1px solid var(--line); margin:2px; display:inline-block; transition:.15s; }
+    .moveline .m.done { opacity:.35; }
+    .moveline .m.current { background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#04150b; border-color:transparent; font-weight:700; }
+    .currentmove { text-align:center; margin:16px 0; }
+    .currentmove .big { font-size:3.2rem; font-weight:800; font-family:ui-monospace,monospace;
+      background:linear-gradient(180deg,#fff,#9be8b5); -webkit-background-clip:text; background-clip:text; color:transparent; min-height:3.4rem; }
+    .currentmove .big svg { width:3rem; height:3rem; color:var(--accent); vertical-align:middle; }
+    .currentmove .desc { color:var(--muted); font-size:.92rem; }
+    .controls { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+    .controls button { padding:11px 15px; font-size:.92rem; }
+    .progress { height:9px; background:#0b0f17; border-radius:6px; overflow:hidden; margin:14px 0; border:1px solid var(--line); }
+    .progress > div { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); width:0%; transition:width .35s ease; }
+
+    /* ---------- PALETTE ---------- */
+    .palette { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:10px 0 6px; }
+    .swatch { width:50px; height:50px; border-radius:12px; cursor:pointer; border:3px solid transparent;
+              transition:.15s; box-shadow:0 4px 10px -4px rgba(0,0,0,.6); }
+    .swatch:hover { transform:scale(1.1) translateY(-2px); }
+    .swatch.active { border-color:#fff; box-shadow:0 0 0 3px var(--accent), 0 6px 16px -4px rgba(34,197,94,.6); }
+
+    /* ---------- FOOTER ---------- */
+    footer { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+             text-align:center; color:var(--muted); font-size:.82rem; margin-top:48px; padding-top:20px;
+             border-top:1px solid var(--line); }
+    footer a { color:var(--accent); text-decoration:none; }
+    footer a:hover { text-decoration:underline; }
+    footer svg { width:16px; height:16px; }
+
+    /* ---------- ICÔNES ---------- */
+    .logo svg { width:52px; height:52px; color:var(--accent); filter:drop-shadow(0 6px 16px rgba(34,197,94,.45)); }
+    .tab { display:inline-flex; align-items:center; gap:8px; }
+    .tab svg, button svg { width:18px; height:18px; flex:none; }
+    .controls button svg { width:16px; height:16px; }
+    button { display:inline-flex; align-items:center; gap:9px; justify-content:center; }
+    .status { display:flex; align-items:center; justify-content:center; gap:8px; }
+    .status svg { width:16px; height:16px; flex:none; }
+    .spin { animation:spin 1s linear infinite; transform-origin:center; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>🧩 Résolveur de Rubik's Cube 3D</h1>
-    <p class="sub">Chargez une photo de chaque face (cube tenu <b>Blanc en haut, Vert devant</b>), puis laissez-vous guider mouvement par mouvement sur le cube 3D.</p>
+    <header class="hero">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5"/></svg></div>
+      <h1>Résolveur de Rubik's Cube 3D</h1>
+      <p class="sub">Chargez une photo de chaque face (ou saisissez les couleurs à la main), et laissez-vous guider mouvement par mouvement sur un cube 3D animé.</p>
+    </header>
 
-    <h2>1. Vos 6 faces</h2>
-    <div class="grid" id="grid"></div>
-
-    <div class="center-actions">
-      <button id="solveBtn" disabled>Analyser &amp; Résoudre</button>
-      <div class="status" id="status">Préparation du solveur…</div>
+    <div class="tabs-wrap">
+      <div class="tabs">
+        <button id="tabPhoto" class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h3l2-2h8l2 2h3v12H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Photos</button>
+        <button id="tabManual" class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Saisie manuelle</button>
+      </div>
     </div>
 
+    <div id="photoMode">
+      <h2>1. Vos 6 faces</h2>
+      <div class="grid" id="grid"></div>
+      <div class="center-actions">
+        <button id="solveBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Analyser &amp; Résoudre</button>
+      </div>
+    </div>
+
+    <div id="manualMode" style="display:none">
+      <h2>1. Peignez votre cube</h2>
+      <p class="sub">Choisissez une couleur, puis cliquez sur les stickers du cube 3D pour les peindre. Tournez le cube avec la souris (cliquer-glisser) pour atteindre toutes les faces. Les centres sont fixes.</p>
+      <div class="palette" id="palette"></div>
+      <div class="center-actions">
+        <button id="solveManualBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></svg>Résoudre ce cube</button>
+      </div>
+    </div>
+
+    <div class="status" id="status" style="text-align:center">Préparation du solveur…</div>
+
     <div id="stage">
-      <h2>2. Guide de résolution</h2>
+      <h2 id="stageTitle">2. Guide de résolution</h2>
       <div class="viewer-row">
         <div id="canvasWrap"><canvas id="cubeCanvas"></canvas></div>
-        <div class="panel">
+        <div class="panel" id="guidePanel">
           <div><span class="bigcount" id="moveCount">0</span> <span style="color:var(--muted)">mouvements</span></div>
           <div class="progress"><div id="progressBar"></div></div>
           <div class="currentmove">
             <div class="big" id="currentMove">—</div>
-            <div class="desc" id="currentDesc">Cliquez sur ▶ Lecture ou Suivant</div>
+            <div class="desc" id="currentDesc">Cliquez sur Lecture ou Suivant</div>
             <div style="margin-top:6px; color:var(--muted)">Étape <b id="stepNo">0</b> / <span id="stepTotal">0</span></div>
           </div>
           <div class="controls">
-            <button class="sec" id="btnReset">⏮ Début</button>
-            <button class="sec" id="btnPrev">◀ Précédent</button>
-            <button id="btnPlay">▶ Lecture</button>
-            <button class="sec" id="btnNext">Suivant ▶</button>
+            <button class="sec" id="btnReset">Début</button>
+            <button class="sec" id="btnPrev">Précédent</button>
+            <button id="btnPlay">Lecture</button>
+            <button class="sec" id="btnNext">Suivant</button>
           </div>
           <div class="moveline" id="moveList"></div>
         </div>
       </div>
     </div>
+
+    <footer>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5"/></svg>
+      <span>Rubik's Cube Solver — détection des couleurs, solveur Kociemba &amp; cube 3D, 100 % dans le navigateur</span> ·
+      <a href="https://github.com/haytamnajim/Rubik-s-Cube-Solver" target="_blank">Code source</a>
+    </footer>
   </div>
 
   <script src="lib/three.min.js"></script>
@@ -111,6 +231,26 @@
   const grid = document.getElementById("grid");
   const solveBtn = document.getElementById("solveBtn");
   const statusEl = document.getElementById("status");
+
+  // ---- icônes SVG (remplacent les emojis) ----
+  const ICONS = {
+    play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l10-7z"/></svg>',
+    pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+    prev:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5v14l-10-7z"/></svg>',
+    next:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l10-7z"/></svg>',
+    restart:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="2.6" height="14" rx="1"/><path d="M20 5v14l-11-7z"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>',
+    spinner:'<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>',
+    trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg>',
+  };
+  // Met à jour le statut avec une icône selon le type.
+  function setStatus(msg, type){
+    const ic = { load:ICONS.spinner, ok:ICONS.check, err:ICONS.alert }[type] || ICONS.info;
+    statusEl.className = "status" + (type==="err" ? " err" : "");
+    statusEl.innerHTML = ic + "<span>" + msg + "</span>";
+  }
 
   FACES.forEach(f => {
     const card = document.createElement("div");
@@ -134,7 +274,7 @@
       document.getElementById("drop-"+face).innerHTML = `<img src="${reader.result}" alt="${face}"/>`;
       document.getElementById("card-"+face).classList.add("filled");
       const n = Object.keys(dataUrls).length;
-      statusEl.textContent = n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)");
+      setStatus(n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)"), "info");
       solveBtn.disabled = !(n === 6 && solverReady);
     };
     reader.readAsDataURL(file);
@@ -206,7 +346,7 @@
     for (const f of FACE_ORDER){
       const center = faces[f][4];
       if (colorToFace[center] !== undefined)
-        throw new Error(`Deux faces ont la même couleur centrale (${center}). Vérifiez l'orientation des photos.`);
+        throw new Error(`Deux faces ont la même couleur centrale (${center}). Chaque centre doit être unique.`);
       colorToFace[center] = f;
     }
     if (Object.keys(colorToFace).length !== 6)
@@ -219,7 +359,7 @@
       }
     for (const f of FACE_ORDER){
       const n = s.split("").filter(ch=>ch===f).length;
-      if (n !== 9) throw new Error(`La couleur de la face ${f} apparaît ${n} fois au lieu de 9 (erreur de lecture des photos).`);
+      if (n !== 9) throw new Error(`La couleur de la face ${f} apparaît ${n} fois au lieu de 9. Vérifiez les couleurs.`);
     }
     return s;
   }
@@ -241,7 +381,17 @@
 
   let scene, camera, renderer, cubeGroup, cubies = [];
   let scannedFaces = null;          // {U:[9],...} couleurs détectées
+  let currentFaces = null;          // couleurs actuellement affichées (photo ou manuel)
+  let stickerMeshes = [];           // tous les stickers (pour le clic en mode manuel)
   const STICKER = 0.86, CUBIE = 0.94, OFFSET = 0.48;
+  let raycaster, pointer;           // pour détecter le sticker cliqué
+
+  // ---- mode (photo / manuel) ----
+  let mode = "photo", editing = false, activeColor = "white", manualFaces = null;
+  function solvedFaces(){
+    return { U:Array(9).fill("white"), R:Array(9).fill("red"), F:Array(9).fill("green"),
+             D:Array(9).fill("yellow"), L:Array(9).fill("orange"), B:Array(9).fill("blue") };
+  }
 
   function initThree(){
     const canvas = document.getElementById("cubeCanvas");
@@ -255,6 +405,7 @@
     scene.add(new THREE.AmbientLight(0xffffff, 0.85));
     const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(5,8,6); scene.add(dl);
     const dl2 = new THREE.DirectionalLight(0xffffff, 0.3); dl2.position.set(-5,-3,-4); scene.add(dl2);
+    raycaster = new THREE.Raycaster(); pointer = new THREE.Vector2();
     resizeRenderer();
     window.addEventListener("resize", resizeRenderer);
     enableDrag(canvas);
@@ -268,16 +419,11 @@
     camera.aspect = w/h; camera.updateProjectionMatrix();
   }
 
-  // Construit le cube à partir des couleurs détectées.
+  // Construit le cube à partir des couleurs (chaque sticker garde sa face + index).
   function buildCube(faces){
     if (cubeGroup) scene.remove(cubeGroup);
-    cubies = [];
+    cubies = []; stickerMeshes = [];
     cubeGroup = new THREE.Group();
-    // couleur d'une facelette donnée (pos + face) :
-    function colorAt(pos, faceLetter){
-      const idx = FACELET_POS[faceLetter].findIndex(p => p[0]===pos[0]&&p[1]===pos[1]&&p[2]===pos[2]);
-      return idx<0 ? null : faces[faceLetter][idx];
-    }
     const stickerGeo = new THREE.PlaneGeometry(STICKER, STICKER);
     for (let x=-1;x<=1;x++) for (let y=-1;y<=1;y++) for (let z=-1;z<=1;z++){
       const cubie = new THREE.Group();
@@ -290,7 +436,9 @@
       for (const [letter, n] of Object.entries(FACE_NORMAL)){
         const onFace = (n[0]&&x===n[0]) || (n[1]&&y===n[1]) || (n[2]&&z===n[2]);
         if (!onFace) continue;
-        const col = colorAt([x,y,z], letter);
+        const idx = FACELET_POS[letter].findIndex(p => p[0]===x&&p[1]===y&&p[2]===z);
+        if (idx<0) continue;
+        const col = faces[letter][idx];
         if (!col) continue;
         const st = new THREE.Mesh(stickerGeo, new THREE.MeshStandardMaterial({ color:COLOR_HEX[col], roughness:0.4 }));
         st.position.set(n[0]*OFFSET, n[1]*OFFSET, n[2]*OFFSET);
@@ -299,20 +447,40 @@
         else if (letter==="B") st.rotation.y = Math.PI;
         else if (letter==="R") st.rotation.y = Math.PI/2;
         else if (letter==="L") st.rotation.y = -Math.PI/2;
-        cubie.add(st);
+        st.userData = { face: letter, idx };
+        cubie.add(st); stickerMeshes.push(st);
       }
       cubeGroup.add(cubie); cubies.push(cubie);
     }
     scene.add(cubeGroup);
   }
 
+  // Peint le sticker cliqué avec la couleur active (mode manuel).
+  function paintAt(clientX, clientY){
+    const canvas = document.getElementById("cubeCanvas");
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((clientX-rect.left)/rect.width)*2 - 1;
+    pointer.y = -((clientY-rect.top)/rect.height)*2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(stickerMeshes, false);
+    if (!hits.length) return;
+    const st = hits[0].object;
+    if (st.userData.idx === 4) return;            // le centre est fixe
+    manualFaces[st.userData.face][st.userData.idx] = activeColor;
+    st.material.color.setHex(COLOR_HEX[activeColor]);
+  }
+
   // ---- rotation de la vue à la souris ----
   function enableDrag(canvas){
-    let dragging=false, px=0, py=0;
-    canvas.addEventListener("mousedown", e=>{ dragging=true; px=e.clientX; py=e.clientY; canvas.style.cursor="grabbing"; });
-    window.addEventListener("mouseup", ()=>{ dragging=false; canvas.style.cursor="grab"; });
+    let dragging=false, px=0, py=0, moved=0;
+    canvas.addEventListener("mousedown", e=>{ dragging=true; px=e.clientX; py=e.clientY; moved=0; canvas.style.cursor="grabbing"; });
+    window.addEventListener("mouseup", e=>{
+      if (dragging && moved < 6 && mode==="manual" && editing) paintAt(e.clientX, e.clientY); // clic = peindre
+      dragging=false; canvas.style.cursor="grab";
+    });
     window.addEventListener("mousemove", e=>{
       if(!dragging||!cubeGroup) return;
+      moved += Math.abs(e.clientX-px)+Math.abs(e.clientY-py);
       cubeGroup.rotation.y += (e.clientX-px)*0.01;
       cubeGroup.rotation.x += (e.clientY-py)*0.01;
       px=e.clientX; py=e.clientY;
@@ -385,39 +553,47 @@
     try {
       Cube.initSolver();
       solverReady = true;
-      const n = Object.keys(dataUrls).length;
-      statusEl.textContent = n>0 ? (n+" / 6 faces chargées") : "Prêt — chargez vos 6 faces.";
-      solveBtn.disabled = !(n===6);
-    } catch(e){ statusEl.textContent = "Erreur d'init du solveur: "+e.message; }
+      if (mode==="manual"){
+        setStatus("Peignez le cube, puis cliquez « Résoudre ce cube ».", "info");
+      } else {
+        const n = Object.keys(dataUrls).length;
+        setStatus(n>0 ? (n+" / 6 faces chargées") : "Prêt — chargez vos 6 faces.", "info");
+        solveBtn.disabled = !(n===6);
+      }
+    } catch(e){ setStatus("Erreur d'init du solveur: "+e.message, "err"); }
   }, 50);
+
+  // Résout un état (faces) et affiche le guide. Utilisé par les 2 modes.
+  function runSolve(faces){
+    setStatus("Calcul de la solution…", "load");
+    let facelets, solStr;
+    try { facelets = buildFacelets(faces); }
+    catch(e){ setStatus(e.message, "err"); return; }
+    try { solStr = Cube.fromString(facelets).solve(); }
+    catch(e){ setStatus("État de cube invalide (impossible à résoudre). Vérifiez les couleurs.", "err"); return; }
+    if (typeof solStr !== "string" || /error/i.test(solStr)){
+      setStatus("État de cube invalide. Vérifiez les couleurs.", "err"); return;
+    }
+    moves = solStr.split(/\s+/).filter(Boolean);
+    currentFaces = faces;
+    if (!scene) initThree();
+    buildCube(faces);
+    editing = false; step = 0; playing = false;
+    document.getElementById("guidePanel").style.display = "";
+    document.getElementById("stageTitle").textContent = "2. Guide de résolution";
+    document.getElementById("stage").classList.add("show");
+    resizeRenderer(); renderMovePanel();
+    setStatus("Cube résolu en "+moves.length+" mouvements !", "ok");
+    document.getElementById("stage").scrollIntoView({behavior:"smooth"});
+  }
 
   solveBtn.addEventListener("click", async ()=>{
     solveBtn.disabled = true;
-    statusEl.className = "status";
-    statusEl.textContent = "🔍 Lecture des couleurs…";
-    try {
-      scannedFaces = await detectAllFaces();
-      const facelets = buildFacelets(scannedFaces);   // valide aussi l'état
-      statusEl.textContent = "🧠 Calcul de la solution…";
-      await new Promise(r=>setTimeout(r,20));
-      const cube = Cube.fromString(facelets);
-      const solStr = cube.solve();
-      moves = solStr.split(/\s+/).filter(Boolean);
-
-      if (!scene) initThree();
-      buildCube(scannedFaces);
-      step = 0; playing = false;
-      document.getElementById("stage").classList.add("show");
-      resizeRenderer();
-      renderMovePanel();
-      statusEl.textContent = "✅ Cube lu et résolu en "+moves.length+" mouvements !";
-      solveBtn.disabled = false;
-      document.getElementById("stage").scrollIntoView({behavior:"smooth"});
-    } catch(err){
-      statusEl.className = "status err";
-      statusEl.textContent = "❌ "+err.message;
-      solveBtn.disabled = false;
-    }
+    setStatus("Lecture des couleurs…", "load");
+    await new Promise(r=>setTimeout(r,20));
+    try { scannedFaces = await detectAllFaces(); runSolve(scannedFaces); }
+    catch(err){ setStatus(err.message, "err"); }
+    solveBtn.disabled = false;
   });
 
   function renderMovePanel(){
@@ -436,7 +612,7 @@
     const cm = document.getElementById("currentMove");
     const cd = document.getElementById("currentDesc");
     if (step >= moves.length){
-      cm.textContent = "🎉"; cd.textContent = "Cube résolu ! Bravo.";
+      cm.innerHTML = ICONS.trophy; cd.textContent = "Cube résolu ! Bravo.";
     } else if (step === 0 && !playing){
       cm.textContent = moves[0] || "—"; cd.textContent = describe(moves[0]);
     } else {
@@ -476,25 +652,88 @@
   }
   async function doReset(){
     if (animating) return;
-    playing = false; document.getElementById("btnPlay").textContent = "▶ Lecture";
-    buildCube(scannedFaces); step = 0; renderMovePanel();
+    playing = false; document.getElementById("btnPlay").innerHTML = ICONS.play + "<span>Lecture</span>";
+    buildCube(currentFaces); step = 0; renderMovePanel();
   }
   async function togglePlay(){
     const btn = document.getElementById("btnPlay");
-    if (playing){ playing=false; btn.textContent="▶ Lecture"; return; }
+    if (playing){ playing=false; btn.innerHTML=ICONS.play+"<span>Lecture</span>"; return; }
     if (step>=moves.length) await doReset();
-    playing = true; btn.textContent = "⏸ Pause";
+    playing = true; btn.innerHTML = ICONS.pause+"<span>Pause</span>";
     while (playing && step < moves.length){
       await doNext();
       await new Promise(r=>setTimeout(r,250));
     }
-    playing = false; btn.textContent = "▶ Lecture";
+    playing = false; btn.innerHTML = ICONS.play+"<span>Lecture</span>";
   }
 
   document.getElementById("btnNext").addEventListener("click", doNext);
   document.getElementById("btnPrev").addEventListener("click", doPrev);
   document.getElementById("btnReset").addEventListener("click", doReset);
   document.getElementById("btnPlay").addEventListener("click", togglePlay);
+
+  // Icônes initiales des boutons de contrôle.
+  document.getElementById("btnReset").innerHTML = ICONS.restart + "<span>Début</span>";
+  document.getElementById("btnPrev").innerHTML  = ICONS.prev + "<span>Précédent</span>";
+  document.getElementById("btnPlay").innerHTML  = ICONS.play + "<span>Lecture</span>";
+  document.getElementById("btnNext").innerHTML  = ICONS.next + "<span>Suivant</span>";
+
+  // =========================================================================
+  //  PARTIE 6 — MODE MANUEL (palette + onglets)
+  // =========================================================================
+  const PALETTE = [
+    {name:"white",label:"Blanc"}, {name:"red",label:"Rouge"}, {name:"green",label:"Vert"},
+    {name:"yellow",label:"Jaune"}, {name:"orange",label:"Orange"}, {name:"blue",label:"Bleu"},
+  ];
+  const paletteEl = document.getElementById("palette");
+  PALETTE.forEach(c=>{
+    const sw = document.createElement("div");
+    sw.className = "swatch" + (c.name===activeColor ? " active" : "");
+    sw.style.background = "#" + COLOR_HEX[c.name].toString(16).padStart(6,"0");
+    sw.title = c.label;
+    sw.addEventListener("click", ()=>{
+      activeColor = c.name;
+      [...paletteEl.children].forEach(x=>x.classList.remove("active"));
+      sw.classList.add("active");
+    });
+    paletteEl.appendChild(sw);
+  });
+
+  function enterManual(){
+    mode = "manual"; editing = true;
+    if (!scene) initThree();
+    manualFaces = solvedFaces();
+    currentFaces = manualFaces;
+    buildCube(manualFaces);
+    document.getElementById("guidePanel").style.display = "none";
+    document.getElementById("stageTitle").textContent = "Cliquez les stickers pour peindre votre cube";
+    document.getElementById("stage").classList.add("show");
+    resizeRenderer();
+    setStatus(solverReady
+      ? "Choisissez une couleur, peignez les stickers, puis « Résoudre ce cube »."
+      : "Préparation du solveur…", "info");
+  }
+
+  document.getElementById("tabPhoto").addEventListener("click", ()=>{
+    mode = "photo"; editing = false;
+    document.getElementById("tabPhoto").classList.add("active");
+    document.getElementById("tabManual").classList.remove("active");
+    document.getElementById("photoMode").style.display = "";
+    document.getElementById("manualMode").style.display = "none";
+    document.getElementById("stage").classList.remove("show");
+    setStatus(solverReady ? "Prêt — chargez vos 6 faces." : "Préparation du solveur…", "info");
+  });
+  document.getElementById("tabManual").addEventListener("click", ()=>{
+    document.getElementById("tabManual").classList.add("active");
+    document.getElementById("tabPhoto").classList.remove("active");
+    document.getElementById("photoMode").style.display = "none";
+    document.getElementById("manualMode").style.display = "";
+    enterManual();
+  });
+  document.getElementById("solveManualBtn").addEventListener("click", ()=>{
+    if (!solverReady){ setStatus("Le solveur n'est pas encore prêt, patientez…", "info"); return; }
+    runSolve(manualFaces);
+  });
   </script>
 </body>
 </html>
