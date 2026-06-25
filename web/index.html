@@ -344,9 +344,10 @@
     return new Promise(resolve=>{
       const { face, quarter } = parseMove(mv);
       const def = MOVE_DEF[face];
-      const pivot = new THREE.Group(); scene.add(pivot);
+      cubeGroup.updateMatrixWorld(true);
+      const pivot = new THREE.Group(); cubeGroup.add(pivot);
       const sel = cubies.filter(c => Math.round(c.position[def.axis]) === def.layer);
-      sel.forEach(c => pivot.attach(c));
+      sel.forEach(c => pivot.attach(c));   // garde le repère du cube
       const target = def.dir * quarter * (Math.PI/2);
       const dur = 360/speed * (Math.abs(quarter)===2 ? 1.4 : 1);
       const t0 = performance.now();
@@ -357,13 +358,14 @@
         if (t<1){ requestAnimationFrame(step); }
         else {
           pivot.rotation[def.axis] = target;
+          pivot.updateMatrixWorld(true);
           sel.forEach(c => {
-            scene.attach(c);
+            cubeGroup.attach(c);          // ré-attache DANS le cube, pas la scène
             c.position.x = Math.round(c.position.x);
             c.position.y = Math.round(c.position.y);
             c.position.z = Math.round(c.position.z);
           });
-          scene.remove(pivot);
+          cubeGroup.remove(pivot);
           resolve();
         }
       })();
