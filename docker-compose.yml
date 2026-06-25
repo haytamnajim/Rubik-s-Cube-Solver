@@ -1,0 +1,31 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Africa/Casablanca
+      # Cle API Gemini (gratuite) -> https://aistudio.google.com/app/apikey
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - solver
+
+  solver:
+    build: ./solver-service
+    restart: unless-stopped
+    # Pas besoin d'exposer le port a l'exterieur : n8n l'appelle en interne
+    # via http://solver:5000. Decommentez pour tester depuis votre machine.
+    # ports:
+    #   - "5000:5000"
+    expose:
+      - "5000"
+
+volumes:
+  n8n_data:

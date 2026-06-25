@@ -1,0 +1,116 @@
+{
+  "name": "Rubik Cube Solver",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Resolution Rubik's Cube",
+        "formDescription": "Uploade 6 photos, dans cet ordre exact : 1) Haut (U)  2) Droite (R)  3) Avant (F)  4) Bas (D)  5) Gauche (L)  6) Arriere (B). Garde toujours la meme orientation (voir README).",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "1 - Face Haut (U)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true },
+            { "fieldLabel": "2 - Face Droite (R)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true },
+            { "fieldLabel": "3 - Face Avant (F)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true },
+            { "fieldLabel": "4 - Face Bas (D)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true },
+            { "fieldLabel": "5 - Face Gauche (L)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true },
+            { "fieldLabel": "6 - Face Arriere (B)", "fieldType": "file", "acceptFileTypes": ".jpg,.jpeg,.png", "requiredField": true }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Recevoir 6 photos",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [-100, 300],
+      "webhookId": "rubik-solver-form"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construit la requete multimodale pour Gemini.\n// Les 6 images sont lues dans l'ordre des champs du formulaire = U,R,F,D,L,B.\nconst FACE_ORDER = ['U','R','F','D','L','B'];\nconst item = $input.first();\nconst binKeys = Object.keys(item.binary || {});\nif (binKeys.length < 6) {\n  throw new Error('Il faut 6 images (une par face). Recu: ' + binKeys.length);\n}\n\nconst prompt = `Tu es un detecteur de couleurs pour un Rubik's Cube 3x3.\nJe te donne 6 images, une par face, dans l'ordre: U (haut), R (droite), F (avant), D (bas), L (gauche), B (arriere).\nPour CHAQUE face, lis les 9 stickers de GAUCHE a DROITE puis de HAUT en BAS (comme la lecture).\nUtilise UNIQUEMENT ces noms de couleur en minuscule: white, yellow, red, orange, blue, green.\nReponds STRICTEMENT en JSON, sans texte autour, au format exact:\n{\\\"faces\\\":{\\\"U\\\":[9 couleurs],\\\"R\\\":[9],\\\"F\\\":[9],\\\"D\\\":[9],\\\"L\\\":[9],\\\"B\\\":[9]}}`;\n\nconst parts = [{ text: prompt }];\nfor (let i = 0; i < 6; i++) {\n  const key = binKeys[i];\n  const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n  const bin = item.binary[key];\n  parts.push({ text: 'Image de la face ' + FACE_ORDER[i] + ' :' });\n  parts.push({ inline_data: { mime_type: bin.mimeType || 'image/jpeg', data: buffer.toString('base64') } });\n}\n\nconst body = {\n  contents: [{ parts }],\n  generationConfig: { temperature: 0, responseMimeType: 'application/json' }\n};\nreturn [{ json: { body } }];"
+      },
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Preparer requete Gemini",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [140, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key", "value": "={{ $env.GEMINI_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "33333333-3333-3333-3333-333333333333",
+      "name": "Gemini - lire couleurs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [380, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrait l'objet 'faces' du JSON renvoye par Gemini.\nconst resp = $input.first().json;\nconst text = resp?.candidates?.[0]?.content?.parts?.[0]?.text;\nif (!text) {\n  throw new Error('Reponse Gemini vide ou bloquee: ' + JSON.stringify(resp).slice(0, 600));\n}\nlet parsed;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  const m = text.match(/\\{[\\s\\S]*\\}/);\n  if (!m) throw new Error('JSON introuvable dans la reponse: ' + text.slice(0, 300));\n  parsed = JSON.parse(m[0]);\n}\nconst faces = parsed.faces || parsed;\nreturn [{ json: { faces } }];"
+      },
+      "id": "44444444-4444-4444-4444-444444444444",
+      "name": "Extraire couleurs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://solver:5000/solve",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ faces: $json.faces }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "55555555-5555-5555-5555-555555555555",
+      "name": "Solveur Kociemba",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Met en forme la solution pour l'humain.\nconst r = $input.first().json;\nif (r.error) {\n  return [{ json: { titre: 'Erreur', message: 'Probleme: ' + r.error } }];\n}\nconst LABEL = {\n  'U': 'Tourner la face du HAUT',\n  'R': 'Tourner la face de DROITE',\n  'F': 'Tourner la face AVANT',\n  'D': 'Tourner la face du BAS',\n  'L': 'Tourner la face de GAUCHE',\n  'B': 'Tourner la face ARRIERE'\n};\nconst SENS = (m) => m.includes(\"'\") ? 'sens anti-horaire (90 gauche)' : (m.includes('2') ? '2 fois (180)' : 'sens horaire (90 droite)');\nconst moves = r.moves || [];\nconst etapes = moves.map((m, i) => {\n  const face = m[0];\n  return (i + 1) + '. ' + m + '  ->  ' + LABEL[face] + ', ' + SENS(m);\n});\nconst message = 'Solution (' + r.move_count + ' mouvements):\\n\\n' +\n  r.solution + '\\n\\n--- Etape par etape ---\\n' + etapes.join('\\n');\nreturn [{ json: { titre: 'Cube resolu en ' + r.move_count + ' mouvements', message, solution: r.solution } }];"
+      },
+      "id": "66666666-6666-6666-6666-666666666666",
+      "name": "Formater la solution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "={{ $json.titre }}",
+        "completionMessage": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "77777777-7777-7777-7777-777777777777",
+      "name": "Afficher solution",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Recevoir 6 photos": { "main": [[{ "node": "Preparer requete Gemini", "type": "main", "index": 0 }]] },
+    "Preparer requete Gemini": { "main": [[{ "node": "Gemini - lire couleurs", "type": "main", "index": 0 }]] },
+    "Gemini - lire couleurs": { "main": [[{ "node": "Extraire couleurs", "type": "main", "index": 0 }]] },
+    "Extraire couleurs": { "main": [[{ "node": "Solveur Kociemba", "type": "main", "index": 0 }]] },
+    "Solveur Kociemba": { "main": [[{ "node": "Formater la solution", "type": "main", "index": 0 }]] },
+    "Formater la solution": { "main": [[{ "node": "Afficher solution", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Résolveur de Rubik's Cube 3D</title>
+  <style>
+    :root {
+      --u:#ffffff; --r:#d22; --f:#2a2; --d:#ffd500; --l:#f80; --b:#06c;
+      --bg:#0e1116; --card:#1a1f27; --line:#2a323d; --txt:#e6edf3; --muted:#8b98a8; --accent:#2da44e;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+           background:var(--bg); color:var(--txt); padding:24px; }
+    .wrap { max-width:1000px; margin:0 auto; }
+    h1 { font-size:1.6rem; margin:0 0 4px; }
+    .sub { color:var(--muted); margin:0 0 20px; }
+    h2 { font-size:1.1rem; border-bottom:1px solid var(--line); padding-bottom:8px; margin:28px 0 14px; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    @media (max-width:600px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+    .face { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center; transition:border-color .2s; }
+    .face.filled { border-color:#3a7; }
+    .badge { display:inline-flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px; font-size:.95rem; }
+    .dot { width:13px; height:13px; border-radius:4px; border:1px solid #0006; }
+    .hint { color:var(--muted); font-size:.72rem; min-height:24px; margin-bottom:6px; }
+    .drop { border:2px dashed var(--line); border-radius:10px; aspect-ratio:1; display:flex; align-items:center;
+            justify-content:center; cursor:pointer; overflow:hidden; background:#0c0f14; color:var(--muted); font-size:.78rem; }
+    .drop:hover { border-color:#4a90e2; }
+    .drop img { width:100%; height:100%; object-fit:cover; }
+    input[type=file]{ display:none; }
+    .center-actions { text-align:center; margin:22px 0; }
+    button { background:var(--accent); color:#fff; border:0; padding:12px 22px; font-size:1rem; border-radius:10px; cursor:pointer; font-weight:600; }
+    button:disabled { background:#30363d; cursor:not-allowed; color:#888; }
+    button.sec { background:#222b36; border:1px solid var(--line); }
+    .status { margin-top:12px; color:var(--muted); min-height:22px; }
+    .status.err { color:#ff6b6b; }
+    #stage { display:none; }
+    #stage.show { display:block; }
+    .viewer-row { display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start; }
+    @media (max-width:820px){ .viewer-row{ grid-template-columns:1fr; } }
+    #canvasWrap { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+    #cubeCanvas { width:100%; height:440px; display:block; cursor:grab; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    .bigcount { font-size:2.4rem; font-weight:800; color:var(--accent); line-height:1; }
+    .moveline { font-family:ui-monospace,monospace; font-size:.95rem; line-height:1.9; word-spacing:2px; margin-top:10px; max-height:120px; overflow:auto; }
+    .moveline .m { padding:1px 6px; border-radius:6px; background:#0c0f14; border:1px solid var(--line); margin:1px; display:inline-block; }
+    .moveline .m.done { opacity:.4; }
+    .moveline .m.current { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .currentmove { text-align:center; margin:14px 0; }
+    .currentmove .big { font-size:3rem; font-weight:800; font-family:ui-monospace,monospace; }
+    .currentmove .desc { color:var(--muted); font-size:.9rem; }
+    .controls { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+    .controls button { padding:10px 14px; font-size:.95rem; }
+    .progress { height:8px; background:#0c0f14; border-radius:6px; overflow:hidden; margin:12px 0; border:1px solid var(--line); }
+    .progress > div { height:100%; background:var(--accent); width:0%; transition:width .3s; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🧩 Résolveur de Rubik's Cube 3D</h1>
+    <p class="sub">Chargez une photo de chaque face (cube tenu <b>Blanc en haut, Vert devant</b>), puis laissez-vous guider mouvement par mouvement sur le cube 3D.</p>
+
+    <h2>1. Vos 6 faces</h2>
+    <div class="grid" id="grid"></div>
+
+    <div class="center-actions">
+      <button id="solveBtn" disabled>Analyser &amp; Résoudre</button>
+      <div class="status" id="status">Préparation du solveur…</div>
+    </div>
+
+    <div id="stage">
+      <h2>2. Guide de résolution</h2>
+      <div class="viewer-row">
+        <div id="canvasWrap"><canvas id="cubeCanvas"></canvas></div>
+        <div class="panel">
+          <div><span class="bigcount" id="moveCount">0</span> <span style="color:var(--muted)">mouvements</span></div>
+          <div class="progress"><div id="progressBar"></div></div>
+          <div class="currentmove">
+            <div class="big" id="currentMove">—</div>
+            <div class="desc" id="currentDesc">Cliquez sur ▶ Lecture ou Suivant</div>
+            <div style="margin-top:6px; color:var(--muted)">Étape <b id="stepNo">0</b> / <span id="stepTotal">0</span></div>
+          </div>
+          <div class="controls">
+            <button class="sec" id="btnReset">⏮ Début</button>
+            <button class="sec" id="btnPrev">◀ Précédent</button>
+            <button id="btnPlay">▶ Lecture</button>
+            <button class="sec" id="btnNext">Suivant ▶</button>
+          </div>
+          <div class="moveline" id="moveList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/three.min.js"></script>
+  <script src="lib/cube.js"></script>
+  <script src="lib/solve.js"></script>
+  <script>
+  // =========================================================================
+  //  PARTIE 1 — UPLOAD DES 6 FACES
+  // =========================================================================
+  const FACES = [
+    { key:"U", nom:"Haut",    color:"var(--u)", hint:"Cube par-dessus (Vert devant)." },
+    { key:"R", nom:"Droite",  color:"var(--r)", hint:"La face de droite." },
+    { key:"F", nom:"Avant",   color:"var(--f)", hint:"La face Verte, de face." },
+    { key:"D", nom:"Bas",     color:"var(--d)", hint:"Le dessous (Vert devant)." },
+    { key:"L", nom:"Gauche",  color:"var(--l)", hint:"La face de gauche." },
+    { key:"B", nom:"Arrière", color:"var(--b)", hint:"La face opposée au Vert." },
+  ];
+  const dataUrls = {};
+  const grid = document.getElementById("grid");
+  const solveBtn = document.getElementById("solveBtn");
+  const statusEl = document.getElementById("status");
+
+  FACES.forEach(f => {
+    const card = document.createElement("div");
+    card.className = "face"; card.id = "card-"+f.key;
+    card.innerHTML = `
+      <div class="badge"><span class="dot" style="background:${f.color}"></span>${f.nom} (${f.key})</div>
+      <div class="hint">${f.hint}</div>
+      <label class="drop" id="drop-${f.key}"><span>+ Photo</span>
+        <input type="file" accept="image/*" data-face="${f.key}" /></label>`;
+    grid.appendChild(card);
+  });
+
+  grid.addEventListener("change", e => {
+    const input = e.target;
+    if (!input.matches("input[type=file]")) return;
+    const file = input.files[0]; if (!file) return;
+    const face = input.dataset.face;
+    const reader = new FileReader();
+    reader.onload = () => {
+      dataUrls[face] = reader.result;
+      document.getElementById("drop-"+face).innerHTML = `<img src="${reader.result}" alt="${face}"/>`;
+      document.getElementById("card-"+face).classList.add("filled");
+      const n = Object.keys(dataUrls).length;
+      statusEl.textContent = n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)");
+      solveBtn.disabled = !(n === 6 && solverReady);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // =========================================================================
+  //  PARTIE 2 — DÉTECTION DÉTERMINISTE DES COULEURS (par pixels)
+  // =========================================================================
+  function rgbToHsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    let h=0; const s=max===0?0:d/max, v=max;
+    if(d!==0){
+      if(max===r) h=((g-b)/d)%6;
+      else if(max===g) h=(b-r)/d+2;
+      else h=(r-g)/d+4;
+      h*=60; if(h<0) h+=360;
+    }
+    return [h,s,v];
+  }
+  function classify(r,g,b){
+    const [h,s,v] = rgbToHsv(r,g,b);
+    if (v > 0.6 && s < 0.25) return "white";   // peu saturé + clair = blanc
+    if (h < 16 || h >= 345)  return "red";
+    if (h < 45)              return "orange";
+    if (h < 72)              return "yellow";
+    if (h < 170)             return "green";
+    if (h < 265)             return "blue";
+    return "red";
+  }
+  // Charge une image et échantillonne les 9 stickers (grille 3x3).
+  function detectFace(dataUrl){
+    return new Promise((resolve,reject)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img,0,0);
+        const fr = [0.2,0.5,0.8];               // positions des centres de cellule
+        const patch = Math.max(4, Math.round(Math.min(c.width,c.height)*0.05));
+        const colors = [];
+        for (let row=0; row<3; row++){
+          for (let col=0; col<3; col++){
+            const cx = Math.round(c.width*fr[col]);
+            const cy = Math.round(c.height*fr[row]);
+            const d = ctx.getImageData(cx-patch, cy-patch, patch*2, patch*2).data;
+            let R=0,G=0,B=0,n=0;
+            for (let i=0;i<d.length;i+=4){ R+=d[i]; G+=d[i+1]; B+=d[i+2]; n++; }
+            colors.push(classify(R/n, G/n, B/n));
+          }
+        }
+        resolve(colors);
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+  async function detectAllFaces(){
+    const faces = {};
+    for (const f of FACES) faces[f.key] = await detectFace(dataUrls[f.key]);
+    return faces;
+  }
+
+  // Construit la chaîne 54 facelettes URFDLB pour cubejs, à partir des couleurs.
+  const FACE_ORDER = ["U","R","F","D","L","B"];
+  function buildFacelets(faces){
+    const colorToFace = {};
+    for (const f of FACE_ORDER){
+      const center = faces[f][4];
+      if (colorToFace[center] !== undefined)
+        throw new Error(`Deux faces ont la même couleur centrale (${center}). Vérifiez l'orientation des photos.`);
+      colorToFace[center] = f;
+    }
+    if (Object.keys(colorToFace).length !== 6)
+      throw new Error("Il faut 6 couleurs centrales différentes.");
+    let s = "";
+    for (const f of FACE_ORDER)
+      for (const col of faces[f]){
+        if (colorToFace[col] === undefined) throw new Error(`Couleur non reconnue: ${col}.`);
+        s += colorToFace[col];
+      }
+    for (const f of FACE_ORDER){
+      const n = s.split("").filter(ch=>ch===f).length;
+      if (n !== 9) throw new Error(`La couleur de la face ${f} apparaît ${n} fois au lieu de 9 (erreur de lecture des photos).`);
+    }
+    return s;
+  }
+
+  // =========================================================================
+  //  PARTIE 3 — CUBE 3D (Three.js)
+  // =========================================================================
+  const COLOR_HEX = { white:0xffffff, yellow:0xffd500, red:0xdd2222, orange:0xff8800, blue:0x0066cc, green:0x22aa22 };
+  const FACE_NORMAL = { U:[0,1,0], R:[1,0,0], F:[0,0,1], D:[0,-1,0], L:[-1,0,0], B:[0,0,-1] };
+  // Position (x,y,z) de chaque facelette, dans l'ordre de lecture de cubejs.
+  const FACELET_POS = {
+    U:[[-1,1,-1],[0,1,-1],[1,1,-1],[-1,1,0],[0,1,0],[1,1,0],[-1,1,1],[0,1,1],[1,1,1]],
+    R:[[1,1,1],[1,1,0],[1,1,-1],[1,0,1],[1,0,0],[1,0,-1],[1,-1,1],[1,-1,0],[1,-1,-1]],
+    F:[[-1,1,1],[0,1,1],[1,1,1],[-1,0,1],[0,0,1],[1,0,1],[-1,-1,1],[0,-1,1],[1,-1,1]],
+    D:[[-1,-1,1],[0,-1,1],[1,-1,1],[-1,-1,0],[0,-1,0],[1,-1,0],[-1,-1,-1],[0,-1,-1],[1,-1,-1]],
+    L:[[-1,1,-1],[-1,1,0],[-1,1,1],[-1,0,-1],[-1,0,0],[-1,0,1],[-1,-1,-1],[-1,-1,0],[-1,-1,1]],
+    B:[[1,1,-1],[0,1,-1],[-1,1,-1],[1,0,-1],[0,0,-1],[-1,0,-1],[1,-1,-1],[0,-1,-1],[-1,-1,-1]],
+  };
+
+  let scene, camera, renderer, cubeGroup, cubies = [];
+  let scannedFaces = null;          // {U:[9],...} couleurs détectées
+  const STICKER = 0.86, CUBIE = 0.94, OFFSET = 0.48;
+
+  function initThree(){
+    const canvas = document.getElementById("cubeCanvas");
+    renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1f27);
+    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(4.2, 4.2, 5.6);
+    camera.lookAt(0,0,0);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(5,8,6); scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0xffffff, 0.3); dl2.position.set(-5,-3,-4); scene.add(dl2);
+    resizeRenderer();
+    window.addEventListener("resize", resizeRenderer);
+    enableDrag(canvas);
+    animateLoop();
+  }
+  function resizeRenderer(){
+    const canvas = document.getElementById("cubeCanvas");
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w===0||h===0) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+
+  // Construit le cube à partir des couleurs détectées.
+  function buildCube(faces){
+    if (cubeGroup) scene.remove(cubeGroup);
+    cubies = [];
+    cubeGroup = new THREE.Group();
+    // couleur d'une facelette donnée (pos + face) :
+    function colorAt(pos, faceLetter){
+      const idx = FACELET_POS[faceLetter].findIndex(p => p[0]===pos[0]&&p[1]===pos[1]&&p[2]===pos[2]);
+      return idx<0 ? null : faces[faceLetter][idx];
+    }
+    const stickerGeo = new THREE.PlaneGeometry(STICKER, STICKER);
+    for (let x=-1;x<=1;x++) for (let y=-1;y<=1;y++) for (let z=-1;z<=1;z++){
+      const cubie = new THREE.Group();
+      cubie.position.set(x,y,z);
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(CUBIE,CUBIE,CUBIE),
+        new THREE.MeshStandardMaterial({ color:0x101418, roughness:0.6 })
+      );
+      cubie.add(body);
+      for (const [letter, n] of Object.entries(FACE_NORMAL)){
+        const onFace = (n[0]&&x===n[0]) || (n[1]&&y===n[1]) || (n[2]&&z===n[2]);
+        if (!onFace) continue;
+        const col = colorAt([x,y,z], letter);
+        if (!col) continue;
+        const st = new THREE.Mesh(stickerGeo, new THREE.MeshStandardMaterial({ color:COLOR_HEX[col], roughness:0.4 }));
+        st.position.set(n[0]*OFFSET, n[1]*OFFSET, n[2]*OFFSET);
+        if (letter==="U") st.rotation.x = -Math.PI/2;
+        else if (letter==="D") st.rotation.x = Math.PI/2;
+        else if (letter==="B") st.rotation.y = Math.PI;
+        else if (letter==="R") st.rotation.y = Math.PI/2;
+        else if (letter==="L") st.rotation.y = -Math.PI/2;
+        cubie.add(st);
+      }
+      cubeGroup.add(cubie); cubies.push(cubie);
+    }
+    scene.add(cubeGroup);
+  }
+
+  // ---- rotation de la vue à la souris ----
+  function enableDrag(canvas){
+    let dragging=false, px=0, py=0;
+    canvas.addEventListener("mousedown", e=>{ dragging=true; px=e.clientX; py=e.clientY; canvas.style.cursor="grabbing"; });
+    window.addEventListener("mouseup", ()=>{ dragging=false; canvas.style.cursor="grab"; });
+    window.addEventListener("mousemove", e=>{
+      if(!dragging||!cubeGroup) return;
+      cubeGroup.rotation.y += (e.clientX-px)*0.01;
+      cubeGroup.rotation.x += (e.clientY-py)*0.01;
+      px=e.clientX; py=e.clientY;
+    });
+  }
+  function animateLoop(){ requestAnimationFrame(animateLoop); if(renderer) renderer.render(scene,camera); }
+
+  // =========================================================================
+  //  PARTIE 4 — ANIMATION DES MOUVEMENTS
+  // =========================================================================
+  const MOVE_DEF = {
+    U:{axis:"y",layer:1,dir:-1}, D:{axis:"y",layer:-1,dir:1},
+    R:{axis:"x",layer:1,dir:-1}, L:{axis:"x",layer:-1,dir:1},
+    F:{axis:"z",layer:1,dir:-1}, B:{axis:"z",layer:-1,dir:1},
+  };
+  const MOVE_LABEL = { U:"Face HAUT", D:"Face BAS", R:"Face DROITE", L:"Face GAUCHE", F:"Face AVANT", B:"Face ARRIÈRE" };
+  let animating = false;
+
+  function parseMove(mv){
+    const face = mv[0];
+    const mod = mv.slice(1);
+    let quarter = 1;
+    if (mod === "2") quarter = 2;
+    else if (mod === "'") quarter = -1;
+    return { face, quarter };
+  }
+  // Anime un mouvement (mv = "R", "U'", "F2"). Renvoie une Promise.
+  function animateMove(mv, speed=1){
+    return new Promise(resolve=>{
+      const { face, quarter } = parseMove(mv);
+      const def = MOVE_DEF[face];
+      const pivot = new THREE.Group(); scene.add(pivot);
+      const sel = cubies.filter(c => Math.round(c.position[def.axis]) === def.layer);
+      sel.forEach(c => pivot.attach(c));
+      const target = def.dir * quarter * (Math.PI/2);
+      const dur = 360/speed * (Math.abs(quarter)===2 ? 1.4 : 1);
+      const t0 = performance.now();
+      (function step(){
+        const t = Math.min(1, (performance.now()-t0)/dur);
+        const e = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;   // easeInOutQuad
+        pivot.rotation[def.axis] = target * e;
+        if (t<1){ requestAnimationFrame(step); }
+        else {
+          pivot.rotation[def.axis] = target;
+          sel.forEach(c => {
+            scene.attach(c);
+            c.position.x = Math.round(c.position.x);
+            c.position.y = Math.round(c.position.y);
+            c.position.z = Math.round(c.position.z);
+          });
+          scene.remove(pivot);
+          resolve();
+        }
+      })();
+    });
+  }
+
+  // =========================================================================
+  //  PARTIE 5 — SOLVEUR + GUIDAGE PAS À PAS
+  // =========================================================================
+  let solverReady = false;
+  let moves = [];        // séquence de mouvements
+  let step = 0;          // étape courante
+  let playing = false;
+
+  // Initialise le solveur (tables) en tâche de fond.
+  setTimeout(()=>{
+    try {
+      Cube.initSolver();
+      solverReady = true;
+      const n = Object.keys(dataUrls).length;
+      statusEl.textContent = n>0 ? (n+" / 6 faces chargées") : "Prêt — chargez vos 6 faces.";
+      solveBtn.disabled = !(n===6);
+    } catch(e){ statusEl.textContent = "Erreur d'init du solveur: "+e.message; }
+  }, 50);
+
+  solveBtn.addEventListener("click", async ()=>{
+    solveBtn.disabled = true;
+    statusEl.className = "status";
+    statusEl.textContent = "🔍 Lecture des couleurs…";
+    try {
+      scannedFaces = await detectAllFaces();
+      const facelets = buildFacelets(scannedFaces);   // valide aussi l'état
+      statusEl.textContent = "🧠 Calcul de la solution…";
+      await new Promise(r=>setTimeout(r,20));
+      const cube = Cube.fromString(facelets);
+      const solStr = cube.solve();
+      moves = solStr.split(/\s+/).filter(Boolean);
+
+      if (!scene) initThree();
+      buildCube(scannedFaces);
+      step = 0; playing = false;
+      document.getElementById("stage").classList.add("show");
+      resizeRenderer();
+      renderMovePanel();
+      statusEl.textContent = "✅ Cube lu et résolu en "+moves.length+" mouvements !";
+      solveBtn.disabled = false;
+      document.getElementById("stage").scrollIntoView({behavior:"smooth"});
+    } catch(err){
+      statusEl.className = "status err";
+      statusEl.textContent = "❌ "+err.message;
+      solveBtn.disabled = false;
+    }
+  });
+
+  function renderMovePanel(){
+    document.getElementById("moveCount").textContent = moves.length;
+    document.getElementById("stepTotal").textContent = moves.length;
+    document.getElementById("stepNo").textContent = step;
+    const pct = moves.length ? Math.round(step/moves.length*100) : 0;
+    document.getElementById("progressBar").style.width = pct+"%";
+    // liste des mouvements
+    const list = document.getElementById("moveList");
+    list.innerHTML = moves.map((m,i)=>{
+      let cls="m"; if(i<step) cls+=" done"; if(i===step) cls+=" current";
+      return `<span class="${cls}">${m}</span>`;
+    }).join(" ");
+    // mouvement courant
+    const cm = document.getElementById("currentMove");
+    const cd = document.getElementById("currentDesc");
+    if (step >= moves.length){
+      cm.textContent = "🎉"; cd.textContent = "Cube résolu ! Bravo.";
+    } else if (step === 0 && !playing){
+      cm.textContent = moves[0] || "—"; cd.textContent = describe(moves[0]);
+    } else {
+      cm.textContent = moves[step] || "—"; cd.textContent = describe(moves[step]);
+    }
+  }
+  function describe(mv){
+    if(!mv) return "";
+    const {face,quarter} = parseMove(mv);
+    const sens = quarter===2 ? "un demi-tour (180°)" : quarter===-1 ? "sens anti-horaire (90°)" : "sens horaire (90°)";
+    return MOVE_LABEL[face]+" — "+sens;
+  }
+
+  async function doNext(){
+    if (animating || step>=moves.length) return;
+    animating = true;
+    const mv = moves[step];
+    document.getElementById("currentMove").textContent = mv;
+    document.getElementById("currentDesc").textContent = describe(mv);
+    await animateMove(mv);
+    step++; animating = false;
+    renderMovePanel();
+  }
+  async function doPrev(){
+    if (animating || step<=0) return;
+    animating = true;
+    step--;
+    const mv = moves[step];
+    await animateMove(invert(mv));   // on défait le mouvement
+    animating = false;
+    renderMovePanel();
+  }
+  function invert(mv){
+    const {face,quarter} = parseMove(mv);
+    if (quarter===2) return face+"2";
+    return quarter===-1 ? face : face+"'";
+  }
+  async function doReset(){
+    if (animating) return;
+    playing = false; document.getElementById("btnPlay").textContent = "▶ Lecture";
+    buildCube(scannedFaces); step = 0; renderMovePanel();
+  }
+  async function togglePlay(){
+    const btn = document.getElementById("btnPlay");
+    if (playing){ playing=false; btn.textContent="▶ Lecture"; return; }
+    if (step>=moves.length) await doReset();
+    playing = true; btn.textContent = "⏸ Pause";
+    while (playing && step < moves.length){
+      await doNext();
+      await new Promise(r=>setTimeout(r,250));
+    }
+    playing = false; btn.textContent = "▶ Lecture";
+  }
+
+  document.getElementById("btnNext").addEventListener("click", doNext);
+  document.getElementById("btnPrev").addEventListener("click", doPrev);
+  document.getElementById("btnReset").addEventListener("click", doReset);
+  document.getElementById("btnPlay").addEventListener("click", togglePlay);
+  </script>
+</body>
+</html>
