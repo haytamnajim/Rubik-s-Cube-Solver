@@ -921,8 +921,10 @@
     const faces = faceletsToFaces(Cube.random().asString());
     previewFaces = faces; scannedFaces = faces;
     runSolve(faces);
-    setStatus("Cube mélangé aléatoirement — résolu en " + moves.length + " mouvements ! Cliquez Lecture.", "ok");
-    setCaption("Démo : cube mélangé. Cliquez « Lecture » pour voir la résolution.");
+    setStatus("Démo : cube mélangé en " + moves.length + " mouvements — résolution automatique…", "ok");
+    setCaption("Démo automatique : le cube se résout tout seul. Glissez pour tourner.");
+    // Lance la lecture automatiquement après une courte pause (on voit d'abord le mélange).
+    setTimeout(()=>{ if (!playing && step === 0) togglePlay(); }, 1000);
   });
 
   // ---- Affiche le cube d'aperçu 3D dès le chargement de la page ----
