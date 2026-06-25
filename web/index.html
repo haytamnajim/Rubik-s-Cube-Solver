@@ -36,26 +36,27 @@
            gap:16px; padding:11px 24px; margin-bottom:6px;
            background:var(--navbg); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
            border-bottom:1px solid var(--line); }
-    .brand { display:flex; align-items:center; gap:14px; font-weight:800; font-size:1.05rem; letter-spacing:-.01em; }
+    .brand { display:flex; align-items:center; gap:18px; font-weight:800; font-size:1.05rem; letter-spacing:-.01em; min-width:0; }
     .brand .name { background:linear-gradient(95deg,#fff,#9be8b5); -webkit-background-clip:text; background-clip:text; color:transparent; }
     .nav-link { display:inline-flex; align-items:center; gap:8px; color:var(--muted); text-decoration:none;
                 font-size:.9rem; font-weight:600; padding:8px 14px; border:1px solid var(--line); border-radius:10px; transition:.2s; }
     .nav-link:hover { color:var(--txt); border-color:#3a455c; background:var(--card2); }
     .nav-link svg { width:18px; height:18px; }
-    .scene { width:46px; height:46px; perspective:240px; flex:none; }
-    .mini-cube { width:46px; height:46px; position:relative; transform-style:preserve-3d; animation:spin3d 9s linear infinite; }
-    .mc-face { position:absolute; width:46px; height:46px; display:grid; gap:2.5px; padding:2.5px;
+    .scene { width:40px; height:40px; perspective:220px; flex:none; }
+    .mini-cube { width:40px; height:40px; position:relative; transform-style:preserve-3d; animation:spin3d 9s linear infinite; }
+    .mc-face { position:absolute; width:40px; height:40px; display:grid; gap:2px; padding:2px;
                grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
                background:#0b0f17; border-radius:6px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); }
     .mc-face i { display:block; border-radius:2px; box-shadow:inset 0 0 2px rgba(0,0,0,.45); }
-    .mc-front  { transform:translateZ(23px); }
-    .mc-back   { transform:rotateY(180deg) translateZ(23px); }
-    .mc-right  { transform:rotateY(90deg)  translateZ(23px); }
-    .mc-left   { transform:rotateY(-90deg) translateZ(23px); }
-    .mc-top    { transform:rotateX(90deg)  translateZ(23px); }
-    .mc-bottom { transform:rotateX(-90deg) translateZ(23px); }
+    .mc-front  { transform:translateZ(20px); }
+    .mc-back   { transform:rotateY(180deg) translateZ(20px); }
+    .mc-right  { transform:rotateY(90deg)  translateZ(20px); }
+    .mc-left   { transform:rotateY(-90deg) translateZ(20px); }
+    .mc-top    { transform:rotateX(90deg)  translateZ(20px); }
+    .mc-bottom { transform:rotateX(-90deg) translateZ(20px); }
     @keyframes spin3d { from{ transform:rotateX(-22deg) rotateY(0deg); } to{ transform:rotateX(-22deg) rotateY(360deg); } }
-    @media (max-width:520px){ .brand .name{ display:none; } }
+    .brand .name { white-space:nowrap; }
+    @media (max-width:560px){ .brand .name{ display:none; } .nav{ padding:10px 16px; } }
 
     /* ---------- HERO ---------- */
     .hero { text-align:center; padding:46px 0 30px; }
@@ -133,8 +134,12 @@
 
     /* ---------- LAYOUT 2 colonnes : cube à gauche, contrôles à droite ---------- */
     .app-layout { display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start; margin-top:8px; }
-    @media (max-width:880px){ .app-layout{ grid-template-columns:1fr; } }
     .viewer-side { position:sticky; top:74px; }
+    @media (max-width:880px){
+      .app-layout{ grid-template-columns:1fr; }
+      .viewer-side{ position:static; }
+      #cubeCanvas{ height:360px; }
+    }
     .viewer-cap { color:var(--muted); font-size:.8rem; text-align:center; margin:10px 0 0; }
     .control-side .grid { grid-template-columns:repeat(3,1fr); }
     @media (max-width:560px){ .control-side .grid { grid-template-columns:repeat(2,1fr); } }
@@ -273,6 +278,22 @@
     .nf-U{ grid-column:2; grid-row:1; } .nf-L{ grid-column:1; grid-row:2; }
     .nf-F{ grid-column:2; grid-row:2; } .nf-R{ grid-column:3; grid-row:2; }
     .nf-B{ grid-column:4; grid-row:2; } .nf-D{ grid-column:2; grid-row:3; }
+
+    /* ---------- MODAL WEBCAM ---------- */
+    .cam-modal { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.82);
+                 display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeUp .25s ease; }
+    .cam-box { background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line);
+               border-radius:18px; padding:18px; width:min(520px,100%); box-shadow:var(--shadow); }
+    .cam-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; font-weight:700; }
+    .cam-head button { padding:8px 14px; font-size:.9rem; }
+    #camVideo { width:100%; border-radius:12px; background:#000; aspect-ratio:1/1; object-fit:cover; display:block; }
+    .cam-chips { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:14px 0; }
+    .cam-chip { padding:7px 13px; border-radius:9px; border:1px solid var(--line); background:var(--inset);
+                color:var(--muted); cursor:pointer; font-weight:700; font-size:.85rem; }
+    .cam-chip.done { border-color:var(--accent); color:var(--accent); }
+    .cam-chip.active { background:linear-gradient(180deg,var(--accent),var(--accent2)); color:#04150b; border-color:transparent; }
+    .cam-actions { text-align:center; }
+    .cam-hint { color:var(--muted); font-size:.78rem; text-align:center; margin:12px 0 0; }
   </style>
 </head>
 <body>
@@ -317,6 +338,9 @@
       <div class="control-side">
         <div id="photoMode">
           <h2>1. Vos 6 faces</h2>
+          <div class="center-actions" style="margin:0 0 16px">
+            <button id="camBtn" class="sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h3l2-2h8l2 2h3v12H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Prendre les photos (webcam)</button>
+          </div>
           <div class="grid" id="grid"></div>
 
           <h2 style="margin-top:26px">2. Vérifiez &amp; corrigez</h2>
@@ -370,6 +394,22 @@
       <span>Rubik's Cube Solver — détection des couleurs, solveur Kociemba &amp; cube 3D, 100 % dans le navigateur</span> ·
       <a href="https://github.com/haytamnajim/Rubik-s-Cube-Solver" target="_blank">Code source</a>
     </footer>
+  </div>
+
+  <!-- Modal de capture webcam -->
+  <div id="camModal" class="cam-modal" style="display:none">
+    <div class="cam-box">
+      <div class="cam-head">
+        <span>Capturer : <b id="camFaceLabel">Haut (U)</b></span>
+        <button id="camClose" class="sec">Fermer</button>
+      </div>
+      <video id="camVideo" autoplay playsinline muted></video>
+      <div class="cam-chips" id="camChips"></div>
+      <div class="cam-actions">
+        <button id="camShot">Capturer cette face</button>
+      </div>
+      <p class="cam-hint">Cadrez bien la face (lumière correcte). Sur téléphone, la caméra arrière est utilisée. Cliquez une pastille pour choisir la face.</p>
+    </div>
   </div>
 
   <script src="lib/three.min.js"></script>
@@ -429,26 +469,31 @@
     const file = input.files[0]; if (!file) return;
     const face = input.dataset.face;
     const reader = new FileReader();
-    reader.onload = async () => {
-      dataUrls[face] = reader.result;
-      document.getElementById("drop-"+face).innerHTML = `<img src="${reader.result}" alt="${face}"/>`;
-      document.getElementById("card-"+face).classList.add("filled");
-      // Détecte les couleurs de cette face et les peint en direct sur le cube 3D.
-      try {
-        const colors = await detectFace(reader.result);
-        if (!previewFaces) previewFaces = blankPreviewFaces();
-        previewFaces[face] = colors;
-        paintFacePreview(face, colors);
-        renderNet();
-      } catch(e){ /* image illisible : on ignore */ }
-      const n = Object.keys(dataUrls).length;
-      setStatus(n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)"), "info");
-      setCaption(n < 6 ? ("Aperçu 3D — " + n + "/6 faces peintes. Glissez pour tourner.")
-                       : "Aperçu 3D complet ! Cliquez « Analyser & Résoudre ».");
-      solveBtn.disabled = !(n === 6 && solverReady);
-    };
+    reader.onload = () => processFaceImage(face, reader.result);
     reader.readAsDataURL(file);
   });
+
+  // Traite une image de face (provenant d'un fichier OU de la webcam) :
+  // miniature, détection des couleurs, peinture du cube 3D et du patron 2D.
+  async function processFaceImage(face, dataUrl){
+    dataUrls[face] = dataUrl;
+    const drop = document.getElementById("drop-"+face);
+    if (drop) drop.innerHTML = `<img src="${dataUrl}" alt="${face}"/>`;
+    const card = document.getElementById("card-"+face);
+    if (card) card.classList.add("filled");
+    try {
+      const colors = await detectFace(dataUrl);
+      if (!previewFaces) previewFaces = blankPreviewFaces();
+      previewFaces[face] = colors;
+      paintFacePreview(face, colors);
+      renderNet();
+    } catch(e){ /* image illisible : on ignore */ }
+    const n = Object.keys(dataUrls).length;
+    setStatus(n + " / 6 faces chargées" + (solverReady ? "" : " (solveur en préparation…)"), "info");
+    setCaption(n < 6 ? ("Aperçu 3D — " + n + "/6 faces peintes. Glissez pour tourner.")
+                     : "Aperçu 3D complet ! Cliquez « Analyser & Résoudre ».");
+    solveBtn.disabled = !(n === 6 && solverReady);
+  }
 
   // =========================================================================
   //  PARTIE 2 — DÉTECTION DÉTERMINISTE DES COULEURS (par pixels)
@@ -998,6 +1043,61 @@
     // Lance la lecture automatiquement après une courte pause (on voit d'abord le mélange).
     setTimeout(()=>{ if (!playing && step === 0) togglePlay(); }, 1000);
   });
+
+  // ---- Capture par webcam ----
+  let camStream = null, camTarget = "U";
+  const CAM_FACES = ["U","R","F","D","L","B"];
+  const CAM_NOM = { U:"Haut (U)", R:"Droite (R)", F:"Avant (F)", D:"Bas (D)", L:"Gauche (L)", B:"Arrière (B)" };
+  function camNextMissing(){ return CAM_FACES.find(f=>!dataUrls[f]) || "U"; }
+  function camUpdateLabel(){ document.getElementById("camFaceLabel").textContent = CAM_NOM[camTarget]; }
+  function camRenderChips(){
+    const chips = document.getElementById("camChips"); chips.innerHTML = "";
+    CAM_FACES.forEach(f=>{
+      const c = document.createElement("button");
+      c.className = "cam-chip" + (dataUrls[f] ? " done" : "") + (f === camTarget ? " active" : "");
+      c.textContent = f; c.title = CAM_NOM[f];
+      c.addEventListener("click", ()=>{ camTarget = f; camRenderChips(); camUpdateLabel(); });
+      chips.appendChild(c);
+    });
+  }
+  async function openCamera(face){
+    camTarget = face || camNextMissing();
+    document.getElementById("camModal").style.display = "flex";
+    camRenderChips(); camUpdateLabel();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      closeCamera();
+      setStatus("La webcam nécessite HTTPS ou localhost. Hébergez l'app (GitHub Pages) pour l'utiliser sur téléphone.", "err");
+      return;
+    }
+    if (!camStream){
+      try {
+        camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:"environment" } }, audio:false });
+        document.getElementById("camVideo").srcObject = camStream;
+      } catch(err){
+        closeCamera();
+        setStatus("Caméra indisponible : " + err.message + " — autorisez l'accès à la caméra.", "err");
+      }
+    }
+  }
+  function closeCamera(){
+    document.getElementById("camModal").style.display = "none";
+    if (camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+    const v = document.getElementById("camVideo"); if (v) v.srcObject = null;
+  }
+  async function shootCamera(){
+    const v = document.getElementById("camVideo");
+    if (!v || !v.videoWidth) return;
+    const s = Math.min(v.videoWidth, v.videoHeight);
+    const c = document.createElement("canvas"); c.width = s; c.height = s;
+    c.getContext("2d").drawImage(v, (v.videoWidth-s)/2, (v.videoHeight-s)/2, s, s, 0, 0, s, s);
+    await processFaceImage(camTarget, c.toDataURL("image/jpeg", 0.9));
+    if (CAM_FACES.every(f=>dataUrls[f])) setStatus("6 faces capturées ! Fermez la caméra puis « Analyser & Résoudre ».", "ok");
+    else camTarget = camNextMissing();
+    camRenderChips(); camUpdateLabel();
+  }
+  document.getElementById("camBtn").addEventListener("click", ()=> openCamera(camNextMissing()));
+  document.getElementById("camShot").addEventListener("click", shootCamera);
+  document.getElementById("camClose").addEventListener("click", closeCamera);
 
   // ---- Plein écran du cube ----
   document.getElementById("fsBtn").addEventListener("click", ()=>{
